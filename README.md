@@ -1,0 +1,1 @@
+This is playground for React Native using [Reanimated 2]( https://docs.swmansion.com/react-native-reanimated/)
