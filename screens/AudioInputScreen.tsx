@@ -1,16 +1,17 @@
 import { FontAwesome } from "@expo/vector-icons";
+import { Audio } from "expo-av";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, View, TextInput, Platform } from "react-native";
-import { LongPressGestureHandler, State } from "react-native-gesture-handler";
+import { View, TextInput, Platform } from "react-native";
 import Animated, {
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AudioInputButton from "../components/AudioInputButton";
+import AudioInputButton, {
+  RecordingResult,
+} from "../components/AudioInputButton";
 import { Text } from "../components/Themed";
 
 const AudioInputScreen: React.FC = () => {
@@ -20,10 +21,37 @@ const AudioInputScreen: React.FC = () => {
     setRecordStart(Date.now());
     setIsRecording(true);
   }, []);
-  const onEndRecording = useCallback((cancelled: boolean) => {
-    setRecordStart(0);
-    setIsRecording(false);
-  }, []);
+  const onEndRecording = useCallback(
+    ({ isCancelled, uri }: RecordingResult) => {
+      setRecordStart(0);
+      setIsRecording(false);
+
+      if (uri) {
+        (async () => {
+          try {
+            await Audio.setAudioModeAsync({
+              playsInSilentModeIOS: true,
+              allowsRecordingIOS: false,
+              interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+              shouldDuckAndroid: true,
+              interruptionModeAndroid:
+                Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+              playThroughEarpieceAndroid: false,
+            });
+            const { sound } = await Audio.Sound.createAsync(
+              { uri },
+              { shouldPlay: true },
+              null,
+              true
+            );
+          } catch (err) {
+            console.log(`error: ${JSON.stringify(err)}`);
+          }
+        })();
+      }
+    },
+    []
+  );
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
@@ -112,6 +140,7 @@ const RecordingIndicator: React.FC<RecordingIndicatorProps> = ({ start }) => {
         justifyContent: "center",
         alignItems: "center",
         flex: 1,
+        flexDirection: "row",
       }}
     >
       <View
